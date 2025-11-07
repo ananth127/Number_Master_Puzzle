@@ -82,7 +82,7 @@ src/
 React Native Developer | Puzzle Game Enthusiast
 
 📧 Email: ananths12704@gmail.com  
-🔗 GitHub: [ananth127](https://github.com/ananth127/Number_Master_Puzzle)
+🔗 GitHub: [ananth127](https://github.com/ananth127/)
 
 ---
 
