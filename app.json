@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.anth.numberpuzzlegame",
+      "package": "com.ananth.numberpuzzlegame",
       "versionCode": 1,
       "permissions": [],
       "adaptiveIcon": {
@@ -30,8 +30,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "951531b5-f5f6-447d-9bd7-e24533810953"
+        "projectId": "749d44f9-9a5c-441a-901f-079bc2d3f4bc"
       }
-    }
+    },
+    "owner": "ananth127"
   }
 }

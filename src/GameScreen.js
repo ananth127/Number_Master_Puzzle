@@ -67,7 +67,7 @@ export default function NumberMasterGame() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isPlaying, totalScore, level]);
+  }, [isPlaying]);
 
   useEffect(() => {
     if (noMovesAvailable && addCount < maxAdds) {
@@ -201,7 +201,7 @@ export default function NumberMasterGame() {
     }).length;
   };
 
-  const checkDiagonalFlow = (r1, c1, r2, c2) => {
+  const checkDiagonalFlow = (r1, c1, r2, c2, currentGrid) => {
     const diffR = r2 - r1;
     const diffC = c2 - c1;
 
@@ -215,7 +215,7 @@ export default function NumberMasterGame() {
 
     while (r !== r2 && c !== c2) {
       const cellKey = `${r},${c}`;
-      if (!matchedCells.has(cellKey) && grid[r][c] !== null) {
+      if (!matchedCells.has(cellKey) && currentGrid[r] && currentGrid[r][c] !== null) {
         return false;
       }
       r += dr;
@@ -225,14 +225,14 @@ export default function NumberMasterGame() {
     return true;
   };
 
-  const checkSnakeWrapAround = (r1, c1, r2, c2) => {
+  const checkSnakeWrapAround = (r1, c1, r2, c2, currentGrid) => {
     if (r1 === r2) return false;
 
     let rightWrapClear = true;
 
     for (let col = c1 + 1; col < GRID_COLS; col++) {
       const cellKey = `${r1},${col}`;
-      if (!matchedCells.has(cellKey) && grid[r1][col] !== null) {
+      if (!matchedCells.has(cellKey) && currentGrid[r1] && currentGrid[r1][col] !== null) {
         rightWrapClear = false;
         break;
       }
@@ -245,7 +245,7 @@ export default function NumberMasterGame() {
       for (let row = startRow; row < endRow; row++) {
         for (let col = 0; col < GRID_COLS; col++) {
           const cellKey = `${row},${col}`;
-          if (!matchedCells.has(cellKey) && grid[row][col] !== null) {
+          if (!matchedCells.has(cellKey) && currentGrid[row] && currentGrid[row][col] !== null) {
             rightWrapClear = false;
             break;
           }
@@ -256,7 +256,7 @@ export default function NumberMasterGame() {
       if (rightWrapClear) {
         for (let col = 0; col < c2; col++) {
           const cellKey = `${r2},${col}`;
-          if (!matchedCells.has(cellKey) && grid[r2][col] !== null) {
+          if (!matchedCells.has(cellKey) && currentGrid[r2] && currentGrid[r2][col] !== null) {
             rightWrapClear = false;
             break;
           }
@@ -269,7 +269,7 @@ export default function NumberMasterGame() {
 
     for (let col = c1 - 1; col >= 0; col--) {
       const cellKey = `${r1},${col}`;
-      if (!matchedCells.has(cellKey) && grid[r1][col] !== null) {
+      if (!matchedCells.has(cellKey) && currentGrid[r1] && currentGrid[r1][col] !== null) {
         leftWrapClear = false;
         break;
       }
@@ -282,7 +282,7 @@ export default function NumberMasterGame() {
       for (let row = startRow; row > endRow; row--) {
         for (let col = GRID_COLS - 1; col >= 0; col--) {
           const cellKey = `${row},${col}`;
-          if (!matchedCells.has(cellKey) && grid[row][col] !== null) {
+          if (!matchedCells.has(cellKey) && currentGrid[row] && currentGrid[row][col] !== null) {
             leftWrapClear = false;
             break;
           }
@@ -293,7 +293,7 @@ export default function NumberMasterGame() {
       if (leftWrapClear) {
         for (let col = GRID_COLS - 1; col > c2; col--) {
           const cellKey = `${r2},${col}`;
-          if (!matchedCells.has(cellKey) && grid[r2][col] !== null) {
+          if (!matchedCells.has(cellKey) && currentGrid[r2] && currentGrid[r2][col] !== null) {
             leftWrapClear = false;
             break;
           }
@@ -305,17 +305,17 @@ export default function NumberMasterGame() {
     return false;
   };
 
-  const checkHeadToTailConnection = (r1, c1, r2, c2) => {
+  const checkHeadToTailConnection = (r1, c1, r2, c2, currentGrid) => {
     let headPos = -1;
     let headRow = -1;
     let headCol = -1;
 
-    for (let i = 0; i < grid.length * GRID_COLS; i++) {
+    for (let i = 0; i < currentGrid.length * GRID_COLS; i++) {
       const row = Math.floor(i / GRID_COLS);
       const col = i % GRID_COLS;
       const cellKey = `${row},${col}`;
 
-      if (grid[row] && grid[row][col] !== null && !matchedCells.has(cellKey)) {
+      if (currentGrid[row] && currentGrid[row][col] !== null && !matchedCells.has(cellKey)) {
         headPos = i;
         headRow = row;
         headCol = col;
@@ -327,12 +327,12 @@ export default function NumberMasterGame() {
     let tailRow = -1;
     let tailCol = -1;
 
-    for (let i = grid.length * GRID_COLS - 1; i >= 0; i--) {
+    for (let i = currentGrid.length * GRID_COLS - 1; i >= 0; i--) {
       const row = Math.floor(i / GRID_COLS);
       const col = i % GRID_COLS;
       const cellKey = `${row},${col}`;
 
-      if (grid[row] && grid[row][col] !== null && !matchedCells.has(cellKey)) {
+      if (currentGrid[row] && currentGrid[row][col] !== null && !matchedCells.has(cellKey)) {
         tailPos = i;
         tailRow = row;
         tailCol = col;
@@ -355,7 +355,7 @@ export default function NumberMasterGame() {
       const col = i % GRID_COLS;
       const cellKey = `${row},${col}`;
 
-      if (grid[row] && grid[row][col] !== null && !matchedCells.has(cellKey)) {
+      if (currentGrid[row] && currentGrid[row][col] !== null && !matchedCells.has(cellKey)) {
         clockwiseClear = false;
         break;
       }
@@ -365,12 +365,12 @@ export default function NumberMasterGame() {
 
     let anticlockwiseClear = true;
 
-    for (let i = tailPos + 1; i < grid.length * GRID_COLS; i++) {
+    for (let i = tailPos + 1; i < currentGrid.length * GRID_COLS; i++) {
       const row = Math.floor(i / GRID_COLS);
       const col = i % GRID_COLS;
       const cellKey = `${row},${col}`;
 
-      if (grid[row] && grid[row][col] !== null && !matchedCells.has(cellKey)) {
+      if (currentGrid[row] && currentGrid[row][col] !== null && !matchedCells.has(cellKey)) {
         anticlockwiseClear = false;
         break;
       }
@@ -382,7 +382,7 @@ export default function NumberMasterGame() {
         const col = i % GRID_COLS;
         const cellKey = `${row},${col}`;
 
-        if (grid[row] && grid[row][col] !== null && !matchedCells.has(cellKey)) {
+        if (currentGrid[row] && currentGrid[row][col] !== null && !matchedCells.has(cellKey)) {
           anticlockwiseClear = false;
           break;
         }
@@ -398,13 +398,13 @@ export default function NumberMasterGame() {
     return rowDiff <= 1 && colDiff <= 1 && (rowDiff !== 0 || colDiff !== 0);
   };
 
-  const isStraightPathClear = (r1, c1, r2, c2) => {
+  const isStraightPathClear = (r1, c1, r2, c2, currentGrid) => {
     if (r1 === r2) {
       const minCol = Math.min(c1, c2);
       const maxCol = Math.max(c1, c2);
       for (let col = minCol + 1; col < maxCol; col++) {
         const cellKey = `${r1},${col}`;
-        if (!matchedCells.has(cellKey) && grid[r1][col] !== null) return false;
+        if (!matchedCells.has(cellKey) && currentGrid[r1] && currentGrid[r1][col] !== null) return false;
       }
       return true;
     } else if (c1 === c2) {
@@ -412,28 +412,30 @@ export default function NumberMasterGame() {
       const maxRow = Math.max(r1, r2);
       for (let row = minRow + 1; row < maxRow; row++) {
         const cellKey = `${row},${c1}`;
-        if (!matchedCells.has(cellKey) && grid[row][c1] !== null) return false;
+        if (!matchedCells.has(cellKey) && currentGrid[row] && currentGrid[row][c1] !== null) return false;
       }
       return true;
     }
     return false;
   };
 
-  const areCellsConnected = (r1, c1, r2, c2) => {
+  const areCellsConnected = (r1, c1, r2, c2, currentGrid = grid) => {
+    // Safety checks for grid bounds
+    if (!currentGrid[r1] || !currentGrid[r2]) return { connected: false };
     if (r1 === r2 && c1 === c2) return { connected: false };
-    if (grid[r1][c1] === null || grid[r2][c2] === null) return { connected: false };
+    if (currentGrid[r1][c1] === null || currentGrid[r2][c2] === null) return { connected: false };
 
-    const num1 = grid[r1][c1];
-    const num2 = grid[r2][c2];
+    const num1 = currentGrid[r1][c1];
+    const num2 = currentGrid[r2][c2];
 
     const isMatch = num1 === num2 || (num1 + num2 === 10);
     if (!isMatch) return { connected: false };
 
     if (areAdjacent(r1, c1, r2, c2)) return { connected: true, isAdjacent: true, type: 'adjacent' };
-    if (isStraightPathClear(r1, c1, r2, c2)) return { connected: true, isAdjacent: false, type: 'straight' };
-    if (checkDiagonalFlow(r1, c1, r2, c2)) return { connected: true, isAdjacent: false, type: 'diagonal' };
-    if (checkSnakeWrapAround(r1, c1, r2, c2)) return { connected: true, isAdjacent: false, type: 'snake' };
-    if (checkHeadToTailConnection(r1, c1, r2, c2)) return { connected: true, isAdjacent: false, type: 'headtotail' };
+    if (isStraightPathClear(r1, c1, r2, c2, currentGrid)) return { connected: true, isAdjacent: false, type: 'straight' };
+    if (checkDiagonalFlow(r1, c1, r2, c2, currentGrid)) return { connected: true, isAdjacent: false, type: 'diagonal' };
+    if (checkSnakeWrapAround(r1, c1, r2, c2, currentGrid)) return { connected: true, isAdjacent: false, type: 'snake' };
+    if (checkHeadToTailConnection(r1, c1, r2, c2, currentGrid)) return { connected: true, isAdjacent: false, type: 'headtotail' };
 
     return { connected: false };
   };
@@ -442,6 +444,7 @@ export default function NumberMasterGame() {
     const playableCells = [];
 
     for (let r = 0; r < currentGrid.length; r++) {
+      if (!currentGrid[r]) continue; // Safety check
       for (let c = 0; c < GRID_COLS; c++) {
         const cellKey = `${r},${c}`;
         if (currentGrid[r][c] !== null && !currentMatched.has(cellKey)) {
@@ -455,7 +458,7 @@ export default function NumberMasterGame() {
         const cell1 = playableCells[i];
         const cell2 = playableCells[j];
 
-        const result = areCellsConnected(cell1.row, cell1.col, cell2.row, cell2.col);
+        const result = areCellsConnected(cell1.row, cell1.col, cell2.row, cell2.col, currentGrid);
 
         if (result.connected) {
           return true;
@@ -552,7 +555,7 @@ export default function NumberMasterGame() {
 
   const handleCellPress = (row, col) => {
     if (!isPlaying) return;
-    setSelectedCellForChange({ row, col });
+    
     // Change mode handling
     if (isChangeMode) {
       setSelectedCellForChange({ row, col });
@@ -644,11 +647,11 @@ export default function NumberMasterGame() {
           setHintCells([]);
           setNoMovesAvailable(false);
           setHintCount(0);
+          setChangeCount(0);
         }, 500);
       } else {
         addPoints(basePoints, connectionResult.isAdjacent, isRowComplete, false);
 
-        // AUTOMATIC GAME-END CHECK
         setTimeout(() => {
           const hasValidMoves = checkForValidMoves(updatedGrid, updatedMatched);
           if (!hasValidMoves && changeCount > 0) {
@@ -752,7 +755,6 @@ export default function NumberMasterGame() {
     setNoMovesAvailable(false);
     setHintCells([]);
 
-    // Check for valid moves after adding
     setTimeout(() => {
       const hasValidMoves = checkForValidMoves(updatedGrid, matchedCells);
       if (!hasValidMoves) {
@@ -766,8 +768,8 @@ export default function NumberMasterGame() {
       Alert.alert("Notice", "Start the game first!");
       return;
     }
-    if (hintCount >= maxChance && totalScore < 9) {
-      Alert.alert("No Hints Left", "You've used all available hints! need at least 10 points to use more.");
+    if (hintCount >= maxChance && totalScore < 10) {
+      Alert.alert("No Hints Left", "You've used all available hints! Need at least 10 points to use more.");
       return;
     }
     if (hintCount >= maxChance && totalScore >= 10) {
@@ -780,13 +782,16 @@ export default function NumberMasterGame() {
             text: "OK",
             onPress: () => {
               setTotalScore(prev => prev - 10);
-              setHintCount(prev => prev - 1);
+              setHintCount(4);
+              const hintFound = showHint();
+              if (hintFound) {
+                setHintCount(prev => prev + 1);
+              }
             }
           }
         ]
       );
       return;
-
     }
     if (hintCells.length > 0) {
       return;
@@ -795,7 +800,6 @@ export default function NumberMasterGame() {
     if (hintFound) {
       setHintCount(prev => prev + 1);
     }
-
   };
 
   const handleChangeNumber = () => {
@@ -808,12 +812,9 @@ export default function NumberMasterGame() {
       Alert.alert("Limit Reached", `You can only change numbers ${maxChance} times!`);
       return;
     }
-    if (selectedCellForChange) {
-      setShowNumberPicker(true);
-      setIsChangeMode(false);
-    } else {
-      setIsChangeMode(true);
-    }
+    
+    setIsChangeMode(true);
+    Alert.alert("Change Mode", "Tap any cell to change its number");
   };
 
   const confirmNumberChange = (newNumber) => {
@@ -829,7 +830,6 @@ export default function NumberMasterGame() {
       })
     );
 
-    // Remove from matched cells if it was matched
     const newMatched = new Set(matchedCells);
     newMatched.delete(`${row},${col}`);
 
@@ -843,47 +843,48 @@ export default function NumberMasterGame() {
   };
 
   const resetGame = () => {
-  let currstate = isPlaying? true : false;
-  if(isPlaying) {
-    setIsPlaying(false);
-  }
-  Alert.alert(
-    "Reset Game",
-    "Are you sure you want to reset the game? Your current progress will be lost.",
-    [
-      { 
-        text: "Cancel", 
-        style: "cancel",
-        onPress: () => currstate? setIsPlaying(true) : null
-      },
-      { 
-        text: "OK", 
-        onPress: () => {
-          generateGrid();
-          setSelected(null);
-          setAddCount(0);
-          setTimeLeft(420);
-          setIsPlaying(false);
-          setLevel(1);
-          setLastPoints(null);
-          setPoints(0);
-          setTotalScore(0);
-          setHintCount(0);
-          setChangeCount(0);
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          setMatchedCells(new Set());
-          setInvalidCell(null);
-          setHintCells([]);
-          setMaxAdds(maxChance);
-          setNoMovesAvailable(false);
-          setIsChangeMode(false);
-          INITIAL_ROWS = 4;
-        } 
-      }
-    ]
-  );
-};
-
+    const currstate = isPlaying;
+    if (isPlaying) {
+      setIsPlaying(false);
+    }
+    Alert.alert(
+      "Reset Game",
+      "Are you sure you want to reset the game? Your current progress will be lost.",
+      [
+        { 
+          text: "Cancel", 
+          style: "cancel",
+          onPress: () => {
+            if (currstate) setIsPlaying(true);
+          }
+        },
+        { 
+          text: "OK", 
+          onPress: () => {
+            generateGrid();
+            setSelected(null);
+            setAddCount(0);
+            setTimeLeft(420);
+            setIsPlaying(false);
+            setLevel(1);
+            setLastPoints(0);
+            setPoints(0);
+            setTotalScore(0);
+            setHintCount(0);
+            setChangeCount(0);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            setMatchedCells(new Set());
+            setInvalidCell(null);
+            setHintCells([]);
+            setMaxAdds(maxChance);
+            setNoMovesAvailable(false);
+            setIsChangeMode(false);
+            INITIAL_ROWS = 4;
+          } 
+        }
+      ]
+    );
+  };
 
   const getCellColor = (num) => {
     const colors = {
@@ -1143,7 +1144,6 @@ export default function NumberMasterGame() {
                 styles.hintButton,
                 hintCount >= maxChance && styles.hintButtonDisabled
               ]}
-            // disabled={!isPlaying || hintCount >= maxChance}
             >
               <Text style={styles.hintButtonText}>
                 💡 Hint ({maxChance - hintCount})
@@ -1158,17 +1158,16 @@ export default function NumberMasterGame() {
                 styles.changeButton,
                 changeCount >= maxChance && styles.changeButtonDisabled
               ]}
-            // disabled={!isPlaying || changeCount >= maxChance}
+              disabled={!isPlaying || changeCount >= maxChance}
             >
               <Text style={styles.changeButtonText}>
-                🔄 Change Number ({maxChance - changeCount})
+                🔄 Change ({maxChance - changeCount})
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-
       </View>
-    </Animated.View >
+    </Animated.View>
   );
 }
 
@@ -1481,9 +1480,6 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.04,
     fontWeight: '900',
     letterSpacing: 0.5,
-  },
-  changeButtonContainer: {
-    width: '100%',
   },
   changeButton: {
     backgroundColor: '#9d4edd',
