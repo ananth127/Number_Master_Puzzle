@@ -1,5 +1,4 @@
-# Number_Master_Puzzle
-# 🎮 Z-Pattern Match Game (React Native)
+# 🎮 Number_Master_Puzzle
 
 A fun logic-based puzzle game where players match cells based on two main rules:
 1. **Same Value Rule** – Match cells that have the same number.
@@ -37,16 +36,18 @@ Make sure you have the following installed:
 ### Setup Steps
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/z-pattern-match-game.git
+git clone https://github.com/ananth127/Number_Master_Puzzle.git
 
 # Navigate to the project directory
-cd z-pattern-match-game
+cd Number_Master_Puzzle
 
 # Install dependencies
 npm install
 
 # Run the app
 npx react-native run-android
+# or
+npm start
 # or
 npx react-native run-ios
 ```
@@ -57,16 +58,8 @@ npx react-native run-ios
 
 ```
 src/
-├── components/
-│   ├── Cell.js          # Represents each playable cell
-│   ├── Grid.js          # Displays 5x5 or dynamic grid layout
-│   └── Header.js        # Game title, score, and reset controls
-├── hooks/
-│   └── useGameLogic.js  # Core matching and validation logic (Z-pattern)
-├── utils/
-│   └── patternRules.js  # Defines pattern rules and validation functions
-├── assets/
-│   └── sounds/          # Game sound effects
+├── AppNavigator.js      # Page Navigation to Game Screen
+├── GameScreen.js        # Game Screen UI
 └── App.js               # Entry point
 ```
 
@@ -80,50 +73,16 @@ src/
 4. Non-valid patterns are rejected with a shake animation.
 5. Score updates and matched cells disappear.
 
----
 
-## 📱 Build and APK
 
-### To Generate APK
-```bash
-npx react-native run-android --variant=release
-```
-The generated APK will be available under:
-```
-android/app/build/outputs/apk/release/app-release.apk
-```
 
-Upload this APK to **GitHub Releases**.
-
----
-
-## 🎥 Demo Video
-Create a 30–60 sec screen recording showing:
-- A few valid and invalid matches
-- Z-pattern validation in action
-- Score updates and smooth gameplay
-
-Upload the video as part of your GitHub release.
-
----
-
-## 🧾 Deliverables Checklist
-
-| Deliverable | Description |
-|--------------|-------------|
-| **GitHub Repo** | Public repository with commits and documentation |
-| **README.md** | Includes setup, game rules, and architecture |
-| **APK File** | Playable APK uploaded to GitHub Releases |
-| **Demo Video** | 30–60 sec gameplay recording |
-
----
 
 ## 👨‍💻 Author
 **Ananth S**  
 React Native Developer | Puzzle Game Enthusiast
 
-📧 Email: your-email@example.com  
-🔗 GitHub: [yourusername](https://github.com/yourusername)
+📧 Email: ananths12704@gmail.com  
+🔗 GitHub: [ananth127](https://github.com/ananth127/Number_Master_Puzzle)
 
 ---
 
