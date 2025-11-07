@@ -16,14 +16,22 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.anth.numberpuzzlegame",
+      "versionCode": 1,
+      "permissions": [],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFFFFF"
       },
       "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "951531b5-f5f6-447d-9bd7-e24533810953"
+      }
     }
   }
 }
