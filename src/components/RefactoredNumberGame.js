@@ -31,9 +31,359 @@ const GRID_COLS = 9;
 const GRID_WIDTH = SCREEN_WIDTH - 20;
 const CELL_SIZE = (GRID_WIDTH - (GRID_COLS - 1) * 7) / GRID_COLS;
 
+// ============================================================================
+// STRATEGY PATTERN: Cell Connection Strategies
+// ============================================================================
+
+/**
+ * Interface for connection checking strategies
+ */
+class ConnectionStrategy {
+    check(r1, c1, r2, c2, grid, matchedCells, gridCols) {
+        throw new Error('Method must be implemented by subclass');
+    }
+}
+
+class AdjacentConnectionStrategy extends ConnectionStrategy {
+    check(r1, c1, r2, c2) {
+        return areAdjacent(r1, c1, r2, c2);
+    }
+}
+
+class StraightPathConnectionStrategy extends ConnectionStrategy {
+    check(r1, c1, r2, c2, grid, matchedCells) {
+        return isStraightPathClear(r1, c1, r2, c2, grid, matchedCells);
+    }
+}
+
+class DiagonalPathConnectionStrategy extends ConnectionStrategy {
+    check(r1, c1, r2, c2, grid, matchedCells) {
+        return isDiagonalPathClear(r1, c1, r2, c2, grid, matchedCells);
+    }
+}
+
+class SnakeWrapConnectionStrategy extends ConnectionStrategy {
+    check(r1, c1, r2, c2, grid, matchedCells, gridCols) {
+        return checkSnakeWrapAround(r1, c1, r2, c2, grid, matchedCells, gridCols);
+    }
+}
+
+class HeadToTailConnectionStrategy extends ConnectionStrategy {
+    check(r1, c1, r2, c2, grid, matchedCells, gridCols) {
+        return checkHeadToTailConnection(r1, c1, r2, c2, grid, matchedCells, gridCols);
+    }
+}
+
+/**
+ * Connection Checker using multiple strategies
+ */
+class ConnectionChecker {
+    constructor() {
+        this.strategies = [
+            new AdjacentConnectionStrategy(),
+            new StraightPathConnectionStrategy(),
+            new DiagonalPathConnectionStrategy(),
+            new SnakeWrapConnectionStrategy(),
+            new HeadToTailConnectionStrategy(),
+        ];
+    }
+
+    checkConnection(r1, c1, r2, c2, grid, matchedCells, gridCols) {
+        if (!grid[r1] || !grid[r2]) return { connected: false };
+        if (r1 === r2 && c1 === c2) return { connected: false };
+        if (grid[r1][c1] === null || grid[r2][c2] === null) return { connected: false };
+
+        const num1 = grid[r1][c1];
+        const num2 = grid[r2][c2];
+
+        const isMatch = num1 === num2 || num1 + num2 === 10;
+        if (!isMatch) return { connected: false };
+
+        // Try each strategy in order
+        for (let i = 0; i < this.strategies.length; i++) {
+            const strategy = this.strategies[i];
+            if (strategy.check(r1, c1, r2, c2, grid, matchedCells, gridCols)) {
+                return { connected: true, isAdjacent: i === 0 };
+            }
+        }
+
+        return { connected: false };
+    }
+}
+
+// ============================================================================
+// STRATEGY PATTERN: Game Action Strategies
+// ============================================================================
+
+/**
+ * Base class for game actions
+ */
+class GameAction {
+    constructor(name, icon, maxActions) {
+        this.name = name;
+        this.icon = icon;
+        this.maxActions = maxActions;
+    }
+
+    canExecute(counter, isPlaying) {
+        return isPlaying && counter.canUse;
+    }
+
+    getErrorMessage() {
+        return `You can only use ${this.name} ${this.maxActions} times!`;
+    }
+
+    execute(context) {
+        throw new Error('Method must be implemented by subclass');
+    }
+}
+
+class AddValuesAction extends GameAction {
+    constructor(maxActions) {
+        super('Add', '➕', maxActions);
+    }
+
+    execute(context) {
+        const { grid, matchedCells, gridCols, setGrid, counter } = context;
+
+        const playableCells = getPlayableCells(grid, matchedCells);
+        const newValues = generateSmartValues(playableCells.length, playableCells.map(c => c.value));
+
+        const updatedGrid = [...grid];
+        let valueIndex = 0;
+
+        // Fill nulls first
+        for (let row = 0; row < updatedGrid.length && valueIndex < newValues.length; row++) {
+            for (let col = 0; col < gridCols && valueIndex < newValues.length; col++) {
+                if (updatedGrid[row][col] === null) {
+                    updatedGrid[row][col] = newValues[valueIndex];
+                    valueIndex++;
+                }
+            }
+        }
+
+        // Add new rows if needed
+        if (valueIndex < newValues.length) {
+            const remainingValues = newValues.slice(valueIndex);
+            let tempRow = [];
+
+            for (let i = 0; i < remainingValues.length; i++) {
+                tempRow.push(remainingValues[i]);
+                if (tempRow.length === gridCols || i === remainingValues.length - 1) {
+                    while (tempRow.length < gridCols) tempRow.push(null);
+                    updatedGrid.push(tempRow);
+                    tempRow = [];
+                }
+            }
+        }
+
+        setGrid(updatedGrid);
+        counter.increment();
+
+        return { success: true };
+    }
+}
+
+class HintAction extends GameAction {
+    constructor(maxActions) {
+        super('Hint', '💡', maxActions);
+    }
+
+    execute(context) {
+        const { grid, matchedCells, connectionChecker, setHintCells, counter, animations } = context;
+
+        const playableCells = getPlayableCells(grid, matchedCells);
+
+        for (let i = 0; i < playableCells.length; i++) {
+            for (let j = i + 1; j < playableCells.length; j++) {
+                const cell1 = playableCells[i];
+                const cell2 = playableCells[j];
+
+                const result = connectionChecker.checkConnection(
+                    cell1.row, cell1.col, cell2.row, cell2.col,
+                    grid, matchedCells, context.gridCols
+                );
+
+                if (result.connected) {
+                    setHintCells([
+                        { row: cell1.row, col: cell1.col },
+                        { row: cell2.row, col: cell2.col }
+                    ]);
+                    counter.increment();
+                    animations.startHintPulse().start();
+                    return { success: true };
+                }
+            }
+        }
+
+        Alert.alert("No Moves", "No valid moves available! Use Add or Change actions.");
+        return { success: false, noMoves: true };
+    }
+}
+
+class ChangeNumberAction extends GameAction {
+    constructor(maxActions) {
+        super('Change', '🔄', maxActions);
+    }
+
+    execute(context) {
+        const { setIsChangeMode } = context;
+        setIsChangeMode(true);
+        return { success: true };
+    }
+}
+
+// ============================================================================
+// STATE PATTERN: Game States
+// ============================================================================
+
+/**
+ * Base class for game states
+ */
+class GameState {
+    constructor(context) {
+        this.context = context;
+    }
+
+    handleCellPress(row, col) {
+        throw new Error('Method must be implemented by subclass');
+    }
+
+    handlePlayPause() {
+        throw new Error('Method must be implemented by subclass');
+    }
+
+    canExecuteAction() {
+        return false;
+    }
+}
+
+class IdleGameState extends GameState {
+    handleCellPress(row, col) {
+        // Do nothing in idle state
+    }
+
+    handlePlayPause() {
+        this.context.setState(new PlayingGameState(this.context));
+        this.context.gameState.setIsPlaying(true);
+    }
+
+    canExecuteAction() {
+        return false;
+    }
+}
+
+class PlayingGameState extends GameState {
+    handleCellPress(row, col) {
+        this.context.processCellPress(row, col);
+    }
+
+    handlePlayPause() {
+        this.context.setState(new PausedGameState(this.context));
+        this.context.gameState.setIsPlaying(false);
+    }
+
+    canExecuteAction() {
+        return true;
+    }
+}
+
+class PausedGameState extends GameState {
+    handleCellPress(row, col) {
+        // Do nothing when paused
+    }
+
+    handlePlayPause() {
+        this.context.setState(new PlayingGameState(this.context));
+        this.context.gameState.setIsPlaying(true);
+    }
+
+    canExecuteAction() {
+        return false;
+    }
+}
+
+class ChangeModeGameState extends GameState {
+    handleCellPress(row, col) {
+        this.context.handleChangeModePress(row, col);
+    }
+
+    handlePlayPause() {
+        // Cannot pause in change mode
+    }
+
+    canExecuteAction() {
+        return false;
+    }
+}
+
+// ============================================================================
+// MAIN GAME CONTROLLER (Context for State Pattern)
+// ============================================================================
+
+class GameController {
+    constructor() {
+        this.state = new IdleGameState(this);
+        this.connectionChecker = new ConnectionChecker();
+        this.actions = null;
+    }
+
+    setState(newState) {
+        this.state = newState;
+    }
+
+    initializeActions(maxActions) {
+        this.actions = {
+            add: new AddValuesAction(maxActions),
+            hint: new HintAction(maxActions),
+            change: new ChangeNumberAction(maxActions),
+        };
+    }
+
+    handleCellPress(row, col) {
+        this.state.handleCellPress(row, col);
+    }
+
+    handlePlayPause() {
+        this.state.handlePlayPause();
+    }
+
+    canExecuteAction() {
+        return this.state.canExecuteAction();
+    }
+
+    executeAction(actionName, context) {
+        const action = this.actions[actionName];
+        if (!action) return { success: false };
+
+        const counter = context.counters[actionName];
+        if (!action.canExecute(counter, this.canExecuteAction())) {
+            if (!this.canExecuteAction()) {
+                Alert.alert("Notice", "Start the game first!");
+            } else {
+                Alert.alert("Limit Reached", action.getErrorMessage());
+            }
+            return { success: false };
+        }
+
+        return action.execute(context);
+    }
+}
+
+// ============================================================================
+// REACT COMPONENT
+// ============================================================================
+
 export default function RefactoredNumberGame() {
     const MAX_ACTIONS = 5;
     const INITIAL_TIME = 420;
+
+    // Initialize game controller
+    const [gameController] = useState(() => {
+        const controller = new GameController();
+        controller.initializeActions(MAX_ACTIONS);
+        return controller;
+    });
 
     // Game state using custom hook
     const gameState = useGameState({
@@ -44,7 +394,7 @@ export default function RefactoredNumberGame() {
 
     // Animations using custom hook
     const animations = useGameAnimations();
-    const [initialRows, setInitialRows] = useState(4); // default 4 rows
+    const [initialRows, setInitialRows] = useState(4);
 
     // Timer using custom hook
     const timer = useGameTimer(INITIAL_TIME, gameState.level, gameState.isPlaying, () => {
@@ -72,6 +422,22 @@ export default function RefactoredNumberGame() {
     const [noMovesAvailable, setNoMovesAvailable] = useState(false);
     const [invalidCell, setInvalidCell] = useState([]);
 
+    // Attach controller context
+    useEffect(() => {
+        gameController.gameState = gameState;
+        gameController.processCellPress = processCellPress;
+        gameController.handleChangeModePress = handleChangeModePress;
+    }, [gameState, grid, matchedCells, selected]);
+
+    // Update controller state when isChangeMode changes
+    useEffect(() => {
+        if (isChangeMode) {
+            gameController.setState(new ChangeModeGameState(gameController));
+        } else if (gameState.isPlaying) {
+            gameController.setState(new PlayingGameState(gameController));
+        }
+    }, [isChangeMode, gameState.isPlaying]);
+
     // Initialize grid on mount and when initialRows changes
     useEffect(() => {
         initializeGrid();
@@ -82,9 +448,9 @@ export default function RefactoredNumberGame() {
         if (gameState.level > 1) {
             const newTime = Math.max(120, INITIAL_TIME - (gameState.level - 1) * 30);
             timer.resetTimer(newTime);
-            // Ensure game is playing after level up
             if (!gameState.isPlaying) {
                 gameState.setIsPlaying(true);
+                gameController.setState(new PlayingGameState(gameController));
             }
         }
     }, [gameState.level]);
@@ -93,7 +459,6 @@ export default function RefactoredNumberGame() {
         const newGrid = generateRandomGrid(initialRows, GRID_COLS);
         setGrid(newGrid);
         setMatchedCells(new Set());
-        console.log('Grid initialized with rows:', initialRows, newGrid);
     };
 
     // Check for no moves after grid or matchedCells changes
@@ -103,13 +468,15 @@ export default function RefactoredNumberGame() {
         const checkForMoves = () => {
             const playableCells = getPlayableCells(grid, matchedCells);
 
-            // Check if there are any valid moves
             let hasValidMove = false;
             for (let i = 0; i < playableCells.length && !hasValidMove; i++) {
                 for (let j = i + 1; j < playableCells.length; j++) {
                     const cell1 = playableCells[i];
                     const cell2 = playableCells[j];
-                    const result = areCellsConnected(cell1.row, cell1.col, cell2.row, cell2.col);
+                    const result = gameController.connectionChecker.checkConnection(
+                        cell1.row, cell1.col, cell2.row, cell2.col,
+                        grid, matchedCells, GRID_COLS
+                    );
 
                     if (result.connected) {
                         hasValidMove = true;
@@ -118,7 +485,6 @@ export default function RefactoredNumberGame() {
                 }
             }
 
-            // Only show no moves if there are no actions available
             if (!hasValidMove && !addCounter.canUse && !changeCounter.canUse) {
                 setNoMovesAvailable(true);
                 Alert.alert(
@@ -133,52 +499,18 @@ export default function RefactoredNumberGame() {
             }
         };
 
-        // Small delay to avoid checking during animations
         const timeout = setTimeout(checkForMoves, 300);
         return () => clearTimeout(timeout);
     }, [grid, matchedCells, gameState.isPlaying, addCounter.count, changeCounter.count]);
 
-    const areCellsConnected = (r1, c1, r2, c2) => {
-        if (!grid[r1] || !grid[r2]) return { connected: false };
-        if (r1 === r2 && c1 === c2) return { connected: false };
-        if (grid[r1][c1] === null || grid[r2][c2] === null) return { connected: false };
-
-        const num1 = grid[r1][c1];
-        const num2 = grid[r2][c2];
-
-        const isMatch = num1 === num2 || num1 + num2 === 10;
-        if (!isMatch) return { connected: false };
-
-        if (areAdjacent(r1, c1, r2, c2)) {
-            return { connected: true, isAdjacent: true };
-        }
-        if (isStraightPathClear(r1, c1, r2, c2, grid, matchedCells)) {
-            return { connected: true, isAdjacent: false };
-        }
-        if (isDiagonalPathClear(r1, c1, r2, c2, grid, matchedCells)) {
-            return { connected: true, isAdjacent: false };
-        }
-        if (checkSnakeWrapAround(r1, c1, r2, c2, grid, matchedCells, GRID_COLS)) {
-            return { connected: true, isAdjacent: false };
-        }
-        if (checkHeadToTailConnection(r1, c1, r2, c2, grid, matchedCells, GRID_COLS)) {
-            return { connected: true, isAdjacent: false };
-        }
-
-        return { connected: false };
+    const handleChangeModePress = (row, col) => {
+        setSelectedCellForChange({ row, col });
+        setShowNumberPicker(true);
+        setIsChangeMode(false);
+        gameController.setState(new PlayingGameState(gameController));
     };
 
-    const handleCellPress = (row, col) => {
-        if (!gameState.isPlaying) return;
-
-        // Change mode handling
-        if (isChangeMode) {
-            setSelectedCellForChange({ row, col });
-            setShowNumberPicker(true);
-            setIsChangeMode(false);
-            return;
-        }
-
+    const processCellPress = (row, col) => {
         if (grid[row][col] === null) return;
         if (matchedCells.has(`${row},${col}`)) return;
 
@@ -191,7 +523,9 @@ export default function RefactoredNumberGame() {
         }
 
         const { row: r1, col: c1 } = selected;
-        const connectionResult = areCellsConnected(r1, c1, row, col);
+        const connectionResult = gameController.connectionChecker.checkConnection(
+            r1, c1, row, col, grid, matchedCells, GRID_COLS
+        );
 
         if (connectionResult.connected) {
             const newMatched = new Set(matchedCells);
@@ -216,7 +550,6 @@ export default function RefactoredNumberGame() {
             const playableCount = getPlayableCells(updatedGrid, updatedMatched).length;
 
             if (playableCount <= 0 || updatedGrid.length === 0) {
-                // Store current playing state
                 const wasPlaying = gameState.isPlaying;
 
                 setTimeout(() => {
@@ -224,21 +557,18 @@ export default function RefactoredNumberGame() {
                     setShowLevelUp(true);
                     animations.animateLevelUp(() => setShowLevelUp(false));
 
-                    // Increment rows for next level
                     const newRowCount = initialRows + 1;
                     setInitialRows(newRowCount);
-                    console.log('Level up! New rows:', newRowCount);
 
-                    // Reset counters
                     addCounter.reset();
                     hintCounter.reset();
                     changeCounter.reset();
                     setNoMovesAvailable(false);
 
-                    // Ensure game continues playing if it was playing before
                     if (wasPlaying) {
                         setTimeout(() => {
                             gameState.setIsPlaying(true);
+                            gameController.setState(new PlayingGameState(gameController));
                         }, 100);
                     }
                 }, 500);
@@ -255,105 +585,50 @@ export default function RefactoredNumberGame() {
         animations.animateScale(1).start();
     };
 
+    const handleCellPress = (row, col) => {
+        gameController.handleCellPress(row, col);
+    };
+
     const handleAddValues = () => {
-        if (!gameState.isPlaying) {
-            Alert.alert("Notice", "Start the game first!");
-            return;
+        const result = gameController.executeAction('add', {
+            grid,
+            matchedCells,
+            gridCols: GRID_COLS,
+            setGrid,
+            counter: addCounter,
+            counters: { add: addCounter, hint: hintCounter, change: changeCounter }
+        });
+
+        if (result.success) {
+            setNoMovesAvailable(false);
         }
-
-        if (!addCounter.canUse) {
-            Alert.alert("Limit Reached", `You can only add values ${MAX_ACTIONS} times!`);
-            return;
-        }
-
-        const playableCells = getPlayableCells(grid, matchedCells);
-        const newValues = generateSmartValues(playableCells.length, playableCells.map(c => c.value));
-
-        const updatedGrid = [...grid];
-        let valueIndex = 0;
-
-        // Fill nulls first
-        for (let row = 0; row < updatedGrid.length && valueIndex < newValues.length; row++) {
-            for (let col = 0; col < GRID_COLS && valueIndex < newValues.length; col++) {
-                if (updatedGrid[row][col] === null) {
-                    updatedGrid[row][col] = newValues[valueIndex];
-                    valueIndex++;
-                }
-            }
-        }
-
-        // Add new rows if needed
-        if (valueIndex < newValues.length) {
-            const remainingValues = newValues.slice(valueIndex);
-            let tempRow = [];
-
-            for (let i = 0; i < remainingValues.length; i++) {
-                tempRow.push(remainingValues[i]);
-                if (tempRow.length === GRID_COLS || i === remainingValues.length - 1) {
-                    while (tempRow.length < GRID_COLS) tempRow.push(null);
-                    updatedGrid.push(tempRow);
-                    tempRow = [];
-                }
-            }
-        }
-
-        setGrid(updatedGrid);
-        addCounter.increment();
-        setNoMovesAvailable(false);
     };
 
     const handleHint = () => {
-        if (!gameState.isPlaying) {
-            Alert.alert("Notice", "Start the game first!");
-            return;
+        const result = gameController.executeAction('hint', {
+            grid,
+            matchedCells,
+            connectionChecker: gameController.connectionChecker,
+            setHintCells,
+            counter: hintCounter,
+            animations,
+            gridCols: GRID_COLS,
+            counters: { add: addCounter, hint: hintCounter, change: changeCounter }
+        });
+
+        if (result.success) {
+            setNoMovesAvailable(false);
+        } else if (result.noMoves) {
+            setNoMovesAvailable(true);
         }
-
-        if (!hintCounter.canUse) {
-            Alert.alert("No Hints Left", "You've used all available hints!");
-            return;
-        }
-
-        // Find valid move
-        const playableCells = getPlayableCells(grid, matchedCells);
-
-        for (let i = 0; i < playableCells.length; i++) {
-            for (let j = i + 1; j < playableCells.length; j++) {
-                const cell1 = playableCells[i];
-                const cell2 = playableCells[j];
-
-                const result = areCellsConnected(cell1.row, cell1.col, cell2.row, cell2.col);
-
-                if (result.connected) {
-                    setHintCells([
-                        { row: cell1.row, col: cell1.col },
-                        { row: cell2.row, col: cell2.col }
-                    ]);
-                    console.log('Hint found:', cell1, cell2);
-                    hintCounter.increment();
-                    animations.startHintPulse().start();
-                    setNoMovesAvailable(false);
-                    return;
-                }
-            }
-        }
-
-        // No moves found
-        setNoMovesAvailable(true);
-        Alert.alert("No Moves", "No valid moves available! Use Add or Change actions.");
     };
 
     const handleChangeNumber = () => {
-        if (!gameState.isPlaying) {
-            Alert.alert("Notice", "Start the game first!");
-            return;
-        }
-
-        if (!changeCounter.canUse) {
-            Alert.alert("Limit Reached", `You can only change numbers ${MAX_ACTIONS} times!`);
-            return;
-        }
-
-        setIsChangeMode(true);
+        const result = gameController.executeAction('change', {
+            setIsChangeMode,
+            counter: changeCounter,
+            counters: { add: addCounter, hint: hintCounter, change: changeCounter }
+        });
     };
 
     const confirmNumberChange = (newNumber) => {
@@ -377,7 +652,6 @@ export default function RefactoredNumberGame() {
             {
                 text: "OK",
                 onPress: () => {
-                    // Reset all state
                     gameState.resetGame();
                     addCounter.reset();
                     hintCounter.reset();
@@ -387,17 +661,21 @@ export default function RefactoredNumberGame() {
                     setNoMovesAvailable(false);
                     setIsChangeMode(false);
                     setMatchedCells(new Set());
-
-                    // Reset rows which will trigger grid initialization
                     setInitialRows(4);
                     initializeGrid();
-                    // Reset timer after a brief delay to ensure state is updated
+
+                    gameController.setState(new IdleGameState(gameController));
+
                     setTimeout(() => {
                         timer.resetTimer(INITIAL_TIME);
                     }, 100);
                 },
             },
         ]);
+    };
+
+    const handlePlayPause = () => {
+        gameController.handlePlayPause();
     };
 
     const getCellStyle = (row, col) => {
@@ -469,7 +747,10 @@ export default function RefactoredNumberGame() {
                     visible={isChangeMode}
                     message="Tap any cell to change"
                     icon="🔄"
-                    onCancel={() => setIsChangeMode(false)}
+                    onCancel={() => {
+                        setIsChangeMode(false);
+                        gameController.setState(new PlayingGameState(gameController));
+                    }}
                     position="bottom"
                 />
 
@@ -486,7 +767,7 @@ export default function RefactoredNumberGame() {
                 <View style={styles.content}>
                     <GameControls
                         isPlaying={gameState.isPlaying}
-                        onPlayPause={() => gameState.setIsPlaying(!gameState.isPlaying)}
+                        onPlayPause={handlePlayPause}
                         onReset={handleReset}
                         timeLeft={timer.timeLeft}
                     />
@@ -511,7 +792,7 @@ export default function RefactoredNumberGame() {
                             icon="➕"
                             count={addCounter.count}
                             maxCount={MAX_ACTIONS}
-                            disabled={!gameState.isPlaying || addCounter.isExhausted}
+                            disabled={!gameController.canExecuteAction() || addCounter.isExhausted}
                             highlight={noMovesAvailable && addCounter.canUse}
                             animValue={noMovesAvailable ? animations.pulseAnim : null}
                         />
@@ -522,7 +803,7 @@ export default function RefactoredNumberGame() {
                             icon="💡"
                             count={hintCounter.count}
                             maxCount={MAX_ACTIONS}
-                            disabled={!gameState.isPlaying || hintCounter.isExhausted}
+                            disabled={!gameController.canExecuteAction() || hintCounter.isExhausted}
                             backgroundColor="#00ff88"
                         />
 
@@ -532,7 +813,7 @@ export default function RefactoredNumberGame() {
                             icon="🔄"
                             count={changeCounter.count}
                             maxCount={MAX_ACTIONS}
-                            disabled={!gameState.isPlaying || changeCounter.isExhausted}
+                            disabled={!gameController.canExecuteAction() || changeCounter.isExhausted}
                         />
                     </ActionButtonsRow>
                 </View>
