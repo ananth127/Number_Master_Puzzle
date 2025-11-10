@@ -1,2 +1,2 @@
-import AppNavigator from './src/AppNavigator';
-export default AppNavigator;
+import RefactoredNumberGame from './src/components/RefactoredNumberGame';
+export default RefactoredNumberGame;
