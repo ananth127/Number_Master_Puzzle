@@ -1,19 +1,14 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Animated } from 'react-native';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+// ============================================================================
+// FILE: src/components/GameGrid.js
+// ============================================================================
+
+
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Animated } from 'react-native';
+import { COLORS, SPACING, RADIUS, LARGE, DIMENSIONS } from '../utils/constants';
 
 /**
  * Reusable Game Grid Component
- * @param {Array<Array>} grid - 2D array representing the grid
- * @param {function} onCellPress - Cell press handler (row, col)
- * @param {function} getCellStyle - Function to get dynamic cell styles
- * @param {function} getCellColor - Function to get cell color based on value
- * @param {function} renderCellContent - Custom cell content renderer (optional)
- * @param {number} cellSize - Size of each cell
- * @param {number} gridHeight - Height of the grid container
- * @param {object} customStyles - Custom style overrides
- * @param {Animated.Value} cellAnim - Animation value for cell effects (optional)
  */
 export const GameGrid = ({
   grid,
@@ -21,22 +16,21 @@ export const GameGrid = ({
   getCellStyle,
   getCellColor,
   renderCellContent,
-  cellSize = 40,
-  gridHeight = SCREEN_HEIGHT * 0.55,
+  cellSize = 30,
+  gridHeight = DIMENSIONS.SCREEN_HEIGHT * 0.55,
   customStyles = {},
   hintCells = [],
-  invalidCell = [],
-  invalidCellAnim = null,
+  invalidCell = null,
   cellAnim = null,
 }) => {
   const defaultRenderCell = (value, row, col) => {
     if (value === null) return null;
 
-    const cellColor = getCellColor ? getCellColor(value) : '#3b82f6';
+    const cellColor = getCellColor ? getCellColor(value) : COLORS.SECONDARY;
 
     return (
       <Text style={[
-        styles.cellText,
+        gridStyles.cellText,
         { color: cellColor, fontSize: cellSize * 0.6 },
         customStyles.cellText
       ]}>
@@ -49,45 +43,43 @@ export const GameGrid = ({
 
   return (
     <View style={[
-      styles.gridContainer,
+      gridStyles.gridContainer,
       { height: gridHeight },
       customStyles.gridContainer
     ]}>
       <ScrollView
-        style={styles.gridScroll}
+        style={gridStyles.gridScroll}
         showsVerticalScrollIndicator={false}
       >
         {grid.map((row, rIdx) => (
-          <View key={rIdx} style={[styles.row, customStyles.row]}>
+          <View key={rIdx} style={[gridStyles.row, customStyles.row]}>
             {row.map((value, cIdx) => {
-              const dynamicStyle = getCellStyle(rIdx, cIdx);
+              const dynamicStyle = getCellStyle ? getCellStyle(rIdx, cIdx) : {};
               const isHint = hintCells.some(cell => cell.row === rIdx && cell.col === cIdx);
               const isInvalid = invalidCell && invalidCell.row === rIdx && invalidCell.col === cIdx;
-              const animationStyle = isHint
-                ? { transform: [{ scale: cellAnim || 1 }] }
-                : isInvalid && invalidCellAnim
-                  ? { transform: [{ scale: cellAnim }] }
-                  : {};
+
+              const CellWrapper = (isHint || isInvalid) && cellAnim ? Animated.View : View;
+              const animationStyle = (isHint || isInvalid) && cellAnim
+                ? { transform: [{ scale: cellAnim }] }
+                : {};
 
               return (
-                <Animated.View
+                <CellWrapper
                   key={`${rIdx}-${cIdx}`}
-                  style={[
-                    dynamicStyle,
-                    animationStyle
-                  ]}
+                  style={[dynamicStyle, animationStyle]}
                 >
                   <TouchableOpacity
                     style={[
-                      styles.cell,
+                      gridStyles.cell,
                       { width: cellSize, height: cellSize },
                       customStyles.cell
                     ]}
                     onPress={() => onCellPress(rIdx, cIdx)}
+                    activeOpacity={0.7}
                   >
                     {renderCell(value, rIdx, cIdx)}
                   </TouchableOpacity>
-                </Animated.View>
+                </CellWrapper>
               );
             })}
           </View>
@@ -97,14 +89,14 @@ export const GameGrid = ({
   );
 };
 
-const styles = StyleSheet.create({
+const gridStyles = StyleSheet.create({
   gridContainer: {
     backgroundColor: 'rgba(20, 20, 20, 0.5)',
-    borderRadius: 20,
-    padding: 8,
-    marginBottom: 10,
+    borderRadius: RADIUS.LARGE,
+    padding: SPACING.SMALL,
+    marginBottom: SPACING.MEDIUM,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: COLORS.BORDER_LIGHT,
     overflow: 'hidden',
   },
   gridScroll: {
@@ -119,10 +111,10 @@ const styles = StyleSheet.create({
   cell: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: RADIUS.SMALL,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: COLORS.BORDER_LIGHT,
   },
   cellText: {
     fontWeight: '900',
@@ -131,3 +123,4 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
 });
+

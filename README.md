@@ -58,9 +58,15 @@ npx react-native run-ios
 
 ```
 src/
-├── AppNavigator.js      # Page Navigation to Game Screen
-├── GameScreen.js        # Game Screen UI
-└── App.js               # Entry point
+───components
+        ActionButtons.js
+        GameControls.js
+        GameGrid.js
+        GameHeader.js
+        GameHooks.js
+        GameUtils.js
+        Modals.js
+        RefactoredNumberGame.js
 ```
 
 ---

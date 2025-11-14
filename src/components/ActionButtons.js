@@ -1,7 +1,10 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated } from 'react-native';
+// ============================================================================
+// FILE: src/components/ActionButtons.js
+// ============================================================================
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { COLORS, FONT_SIZES, SPACING, RADIUS, DIMENSIONS } from '../utils/constants';
 
 /**
  * Single Action Button Component
@@ -13,14 +16,15 @@ export const ActionButton = ({
   count,
   maxCount,
   disabled = false,
-  backgroundColor = '#9d4edd',
-  disabledColor = '#475569',
+  backgroundColor = COLORS.PRIMARY,
+  disabledColor = COLORS.DISABLED,
   highlight = false,
-  highlightColor = '#e94560',
+  highlightColor = COLORS.DANGER,
   animValue,
   customStyles = {},
 }) => {
   const buttonColor = disabled ? disabledColor : (highlight ? highlightColor : backgroundColor);
+  const remaining = maxCount !== undefined && count !== undefined ? maxCount - count : null;
 
   const ButtonContent = (
     <TouchableOpacity
@@ -31,11 +35,12 @@ export const ActionButton = ({
         customStyles.button
       ]}
       disabled={disabled}
+      activeOpacity={0.7}
     >
       <Text style={[styles.actionButtonText, customStyles.text]}>
         {icon && `${icon} `}
         {label}
-        {count !== undefined && maxCount !== undefined && ` (${maxCount - count})`}
+        {remaining !== null && ` (${remaining})`}
       </Text>
     </TouchableOpacity>
   );
@@ -70,21 +75,52 @@ export const ActionButtonsRow = ({ children, customStyles = {} }) => {
   );
 };
 
+/**
+ * Icon Button Component (for small actions)
+ */
+export const IconButton = ({
+  onPress,
+  icon,
+  size = 44,
+  color = COLORS.TEXT_PRIMARY,
+  backgroundColor = 'rgba(255, 255, 255, 0.1)',
+  disabled = false,
+  customStyles = {}
+}) => {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[
+        styles.iconButton,
+        { width: size, height: size, backgroundColor },
+        disabled && styles.iconButtonDisabled,
+        customStyles.button
+      ]}
+      disabled={disabled}
+      activeOpacity={0.7}
+    >
+      <Text style={[styles.iconButtonText, { fontSize: size * 0.5, color }, customStyles.text]}>
+        {icon}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
 const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
-    marginVertical: 12,
-    paddingHorizontal: 5,
+    gap: SPACING.MEDIUM,
+    marginVertical: SPACING.MEDIUM,
+    paddingHorizontal: SPACING.SMALL,
   },
   actionButtonWrapper: {
     flex: 1,
   },
   actionButton: {
-    paddingVertical: SCREEN_HEIGHT * 0.015,
-    borderRadius: 15,
+    paddingVertical: DIMENSIONS.SCREEN_HEIGHT * 0.015,
+    borderRadius: RADIUS.MEDIUM,
     alignItems: 'center',
     elevation: 6,
     shadowOffset: { width: 0, height: 4 },
@@ -92,10 +128,26 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   actionButtonText: {
-    color: '#fff',
-    fontSize: SCREEN_WIDTH * 0.04,
+    color: COLORS.TEXT_PRIMARY,
+    fontSize: FONT_SIZES.MEDIUM,
     fontWeight: '900',
     letterSpacing: 0.5,
     textAlign: 'center',
+  },
+  iconButton: {
+    borderRadius: RADIUS.ROUND,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  iconButtonText: {
+    fontWeight: '700',
+  },
+  iconButtonDisabled: {
+    opacity: 0.5,
   },
 });

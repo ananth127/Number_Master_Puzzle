@@ -1,2 +1,2 @@
-import RefactoredNumberGame from './src/components/RefactoredNumberGame';
-export default RefactoredNumberGame;
+import NumberPuzzleGame from './src/screens/NumberPuzzleGame';
+export default NumberPuzzleGame;
