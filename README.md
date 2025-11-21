@@ -58,15 +58,46 @@ npx react-native run-ios
 
 ```
 src/
-───components
-        ActionButtons.js
-        GameControls.js
-        GameGrid.js
-        GameHeader.js
-        GameHooks.js
-        GameUtils.js
-        Modals.js
-        RefactoredNumberGame.js
++---audio
+|       GameAudioLoader.js
+|
++---components
+|       ActionButtons.js
+|       GameControls.js
+|       GameGrid.js
+|       GameHeader.js
+|       GameModals.js
+|       ScoreDisplay.js
+|
++---controllers
+|       GameController.js
+|
++---core
+|       AchievementSystem.js
+|       AudioSystem.js
+|       LevelSystem.js
+|       ResourceSystem.js
+|       ScoreSystem.js
+|       SoundSystem.js
+|       StateMachine.js
+|       TimerSystem.js
+|
++---hooks
+|       useGameController.js
+|       useGameState.js
+|       useGameSystems.js
+|
++---screens
+|       NumberPuzzleGame.js
+|
++---systems
+|       ConnectionValidator.js
+|       GridSystem.js
+|       MatchSystem.js
+|
+\---utils
+        constants.js
+        helpers.js
 ```
 
 ---
